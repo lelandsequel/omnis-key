@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OMNIS KEY — Local COSMIC Runtime</title>
+  <style>
+    :root {
+      --black: #0a0a0a;
+      --gold: #FFD700;
+      --white: #f0f0f0;
+      --dim: #666;
+      --border: rgba(255,215,0,0.15);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--black);
+      color: var(--white);
+      font-family: 'Courier New', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 24px 48px;
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-logo {
+      font-size: 14px;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+    }
+    .nav-links { display: flex; gap: 32px; }
+    .nav-links a {
+      color: var(--dim);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--white); }
+
+    /* HERO */
+    .hero {
+      padding: 120px 48px 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .hero-tag {
+      font-size: 11px;
+      letter-spacing: 0.4em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+    .hero h1 {
+      font-size: clamp(48px, 8vw, 96px);
+      font-weight: 900;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin-bottom: 40px;
+    }
+    .hero h1 span { color: var(--gold); }
+    .hero-sub {
+      font-size: 18px;
+      color: var(--dim);
+      max-width: 560px;
+      line-height: 1.6;
+      margin-bottom: 56px;
+    }
+    .hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+    .btn-primary {
+      background: var(--gold);
+      color: var(--black);
+      border: none;
+      padding: 14px 32px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid var(--border);
+      padding: 14px 32px;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: border-color 0.2s;
+    }
+    .btn-secondary:hover { border-color: var(--gold); }
+
+    /* INSTALL BAR */
+    .install-bar {
+      background: rgba(255,215,0,0.04);
+      border: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      max-width: 640px;
+      margin: 40px 48px;
+    }
+    .install-bar .label {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .install-bar code {
+      color: var(--white);
+      font-size: 14px;
+      flex: 1;
+    }
+    .install-bar .copy-btn {
+      background: none;
+      border: none;
+      color: var(--dim);
+      cursor: pointer;
+      font-size: 12px;
+      letter-spacing: 0.1em;
+      font-family: 'Courier New', monospace;
+      transition: color 0.2s;
+    }
+    .install-bar .copy-btn:hover { color: var(--gold); }
+
+    /* DIVIDER */
+    .divider { border: none; border-top: 1px solid var(--border); margin: 0 48px; }
+
+    /* SECTION */
+    section { padding: 80px 48px; max-width: 1200px; margin: 0 auto; }
+    .section-tag {
+      font-size: 11px;
+      letter-spacing: 0.4em;
+      color: var(--gold);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    section h2 {
+      font-size: clamp(32px, 4vw, 56px);
+      font-weight: 900;
+      letter-spacing: -0.02em;
+      margin-bottom: 48px;
+    }
+
+    /* PIPELINE */
+    .pipeline {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      overflow-x: auto;
+      padding-bottom: 16px;
+    }
+    .pipeline-stage {
+      background: rgba(255,215,0,0.04);
+      border: 1px solid var(--border);
+      padding: 20px 24px;
+      min-width: 110px;
+      text-align: center;
+      flex-shrink: 0;
+    }
+    .pipeline-stage .engine-name {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold);
+      letter-spacing: 0.1em;
+    }
+    .pipeline-stage .engine-desc {
+      font-size: 10px;
+      color: var(--dim);
+      margin-top: 6px;
+      letter-spacing: 0.05em;
+    }
+    .pipeline-arrow {
+      color: var(--gold);
+      font-size: 18px;
+      padding: 0 8px;
+      flex-shrink: 0;
+    }
+
+    /* FEATURES GRID */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+    .feature {
+      background: var(--black);
+      padding: 40px 32px;
+    }
+    .feature-icon {
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+    .feature h3 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+      color: var(--white);
+    }
+    .feature p {
+      font-size: 13px;
+      color: var(--dim);
+      line-height: 1.7;
+    }
+
+    /* DEMO TERMINAL */
+    .terminal {
+      background: #111;
+      border: 1px solid var(--border);
+      padding: 32px;
+      font-size: 13px;
+      line-height: 1.8;
+      max-width: 720px;
+    }
+    .terminal .prompt { color: var(--gold); }
+    .terminal .cmd { color: var(--white); }
+    .terminal .out { color: #888; }
+    .terminal .ok { color: #4ade80; }
+    .terminal .val { color: var(--gold); }
+
+    /* LIVE DEMO */
+    #demo-section {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .demo-input-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .demo-input-row input {
+      flex: 1;
+      background: rgba(255,215,0,0.04);
+      border: 1px solid var(--border);
+      color: var(--white);
+      padding: 14px 18px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      outline: none;
+    }
+    .demo-input-row input::placeholder { color: var(--dim); }
+    .demo-input-row input:focus { border-color: var(--gold); }
+    #demo-output {
+      background: #111;
+      border: 1px solid var(--border);
+      padding: 28px;
+      min-height: 180px;
+      font-size: 13px;
+      line-height: 1.8;
+      color: #888;
+    }
+    #demo-output .result-label { color: var(--gold); font-size: 11px; letter-spacing: 0.3em; margin-bottom: 12px; }
+    #demo-output .result-decision { color: var(--white); font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+    #demo-output .result-confidence { color: var(--dim); }
+    #demo-output .result-heimdall { color: #4ade80; margin-top: 8px; }
+
+    /* CONSTELLATIONS */
+    .constellations {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1px;
+      background: var(--border);
+    }
+    .constellation {
+      background: var(--black);
+      padding: 32px;
+      border: 1px solid transparent;
+      transition: border-color 0.2s;
+    }
+    .constellation:hover { border-color: var(--gold); }
+    .constellation-tag {
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      color: var(--gold);
+      margin-bottom: 12px;
+    }
+    .constellation h3 {
+      font-size: 20px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+    .constellation p {
+      font-size: 12px;
+      color: var(--dim);
+      line-height: 1.6;
+    }
+    .constellation-engines {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .engine-chip {
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      padding: 3px 8px;
+      border: 1px solid var(--border);
+      color: var(--dim);
+    }
+    .built { border-color: rgba(255,215,0,0.4); color: var(--gold); }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 40px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .footer-logo { font-size: 12px; letter-spacing: 0.3em; color: var(--gold); }
+    .footer-links { display: flex; gap: 32px; }
+    .footer-links a {
+      font-size: 11px;
+      color: var(--dim);
+      text-decoration: none;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .footer-links a:hover { color: var(--white); }
+    .footer-copy { font-size: 11px; color: var(--dim); }
+
+    @media (max-width: 640px) {
+      nav, section, footer { padding-left: 24px; padding-right: 24px; }
+      .install-bar { margin-left: 24px; margin-right: 24px; }
+      .divider { margin-left: 24px; margin-right: 24px; }
+      .pipeline { gap: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">OMNIS KEY</div>
+  <div class="nav-links">
+    <a href="#engines">Engines</a>
+    <a href="#constellations">Constellations</a>
+    <a href="#demo-section">Demo</a>
+    <a href="https://github.com/lelandsequel/omnis-key" target="_blank">GitHub</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-tag">// Local COSMIC Runtime</div>
+  <h1>Intelligence<br>that <span>runs</span><br>locally.</h1>
+  <p class="hero-sub">OMNIS KEY is a local AI daemon powered by COSMIC world-model engines. Causal reasoning, temporal indexing, and trust scoring — no cloud required.</p>
+  <div class="hero-actions">
+    <a href="https://github.com/lelandsequel/omnis-key" class="btn-primary" target="_blank">Get Started →</a>
+    <a href="#demo-section" class="btn-secondary">Live Demo</a>
+  </div>
+</div>
+
+<!-- INSTALL BAR -->
+<div class="install-bar">
+  <span class="label">Install</span>
+  <code>npm install -g omnis-key && omnis-key setup</code>
+  <button class="copy-btn" onclick="copyInstall()">COPY</button>
+</div>
+
+<hr class="divider">
+
+<!-- ENGINES -->
+<section id="engines">
+  <div class="section-tag">// COSMIC Engine Chain</div>
+  <h2>Nine engines.<br>One pipeline.</h2>
+  <div class="pipeline">
+    <div class="pipeline-stage">
+      <div class="engine-name">METEOR</div>
+      <div class="engine-desc">Signal correlation</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage">
+      <div class="engine-name">COMET</div>
+      <div class="engine-desc">Ownership chain</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage">
+      <div class="engine-name">NOVA</div>
+      <div class="engine-desc">Causal inference</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage">
+      <div class="engine-name">ECLIPSE</div>
+      <div class="engine-desc">Temporal trends</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage">
+      <div class="engine-name">PULSAR</div>
+      <div class="engine-desc">Stress testing</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage">
+      <div class="engine-name">HEIMDALL</div>
+      <div class="engine-desc">Trust scoring</div>
+    </div>
+    <div class="pipeline-arrow">→</div>
+    <div class="pipeline-stage">
+      <div class="engine-name">AURORA</div>
+      <div class="engine-desc">Gate decision</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- FEATURES -->
+<section>
+  <div class="section-tag">// What It Does</div>
+  <h2>Not a chatbot.<br>A runtime.</h2>
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">🏠</div>
+      <h3>Runs Locally</h3>
+      <p>Daemon on port 18800. JSON persistence in ~/.omnis-key/. Air-gap capable. Your data never leaves your machine.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🛡️</div>
+      <h3>HEIMDALL Trust Layer</h3>
+      <p>Every response carries a trust score (0–100), SHA-256 attestation, and a 4-tier verdict: SOVEREIGN / VERIFIED / PROVISIONAL / CONTESTED.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔭</div>
+      <h3>Causal, Not Correlational</h3>
+      <p>NOVA builds a structural causal model. ECLIPSE reconstructs temporal sequences. You get <em>why</em>, not just <em>what</em>.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🌐</div>
+      <h3>Constellation Packs</h3>
+      <p>POLARIS (gas/compression), SOLSTICE (refinery/logistics), GAIA (food/conflict), AEGIS (defense) — domain intelligence you install like npm packages.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎙️</div>
+      <h3>JARVIS Voice Mode</h3>
+      <p>Web Speech API for input, ElevenLabs for output. Talk to your runtime. Get COSMIC briefings spoken back to you.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🧠</div>
+      <h3>LLM-Agnostic</h3>
+      <p>Routes through Ollama first, falls back to Claude or GPT. COSMIC engines run regardless — even fully offline if needed.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- LIVE DEMO -->
+<section id="demo-section">
+  <div class="section-tag">// Live Demo</div>
+  <h2>Query the<br>pipeline.</h2>
+  <div class="demo-input-row">
+    <input type="text" id="demo-query" placeholder="e.g. Compressor surge risk in Williams County ND" />
+    <button class="btn-primary" onclick="runDemo()">RUN COSMIC →</button>
+  </div>
+  <div id="demo-output">
+    <div style="color: #444">// Enter a query above. COSMIC pipeline fires: METEOR → NOVA → ECLIPSE → PULSAR → HEIMDALL → AURORA</div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- CONSTELLATIONS -->
+<section id="constellations">
+  <div class="section-tag">// Domain Intelligence Packs</div>
+  <h2>Constellations.</h2>
+  <div class="constellations">
+    <div class="constellation">
+      <div class="constellation-tag">BUILT-IN</div>
+      <h3>POLARIS</h3>
+      <p>Gas compression and midstream infrastructure intelligence.</p>
+      <div class="constellation-engines">
+        <span class="engine-chip built">CORE</span>
+        <span class="engine-chip built">FLUX</span>
+        <span class="engine-chip built">RESONANCE</span>
+        <span class="engine-chip built">DRIVE</span>
+        <span class="engine-chip built">CRYO</span>
+      </div>
+    </div>
+    <div class="constellation">
+      <div class="constellation-tag">COMING SOON</div>
+      <h3>SOLSTICE</h3>
+      <p>Refinery operations, logistics, and throughput optimization.</p>
+      <div class="constellation-engines">
+        <span class="engine-chip">REFINE</span>
+        <span class="engine-chip">ROUTE</span>
+        <span class="engine-chip">SURGE</span>
+        <span class="engine-chip">VEIL</span>
+        <span class="engine-chip">PRISM</span>
+      </div>
+    </div>
+    <div class="constellation">
+      <div class="constellation-tag">COMING SOON</div>
+      <h3>GAIA</h3>
+      <p>Food security, water stress, and conflict-frontier analysis.</p>
+      <div class="constellation-engines">
+        <span class="engine-chip">HARVEST</span>
+        <span class="engine-chip">DENSITY</span>
+        <span class="engine-chip">RIVER</span>
+        <span class="engine-chip">FRONTIER</span>
+        <span class="engine-chip">PRISM</span>
+      </div>
+    </div>
+    <div class="constellation">
+      <div class="constellation-tag">COMING SOON</div>
+      <h3>AEGIS</h3>
+      <p>Defense logistics, supply chain stress, and procurement risk.</p>
+      <div class="constellation-engines">
+        <span class="engine-chip">SHIELD</span>
+        <span class="engine-chip">VECTOR</span>
+        <span class="engine-chip">FORGE</span>
+        <span class="engine-chip">SENTINEL</span>
+        <span class="engine-chip">FLARE</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TERMINAL SNIPPET -->
+<section>
+  <div class="section-tag">// Quick Start</div>
+  <h2>Up in<br>60 seconds.</h2>
+  <div class="terminal">
+    <div><span class="prompt">$</span> <span class="cmd">npm install -g omnis-key</span></div>
+    <div><span class="out">+ omnis-key@1.0.0</span></div>
+    <br>
+    <div><span class="prompt">$</span> <span class="cmd">omnis-key setup</span></div>
+    <div><span class="out">? Daemon port [18800]</span></div>
+    <div><span class="out">? ElevenLabs API key (optional, for JARVIS voice)</span></div>
+    <div><span class="out">? Auto-start on login? [Y/n]</span></div>
+    <div><span class="ok">✓ Config written to ~/.omnis-key/config.json</span></div>
+    <div><span class="ok">✓ launchd service installed</span></div>
+    <br>
+    <div><span class="prompt">$</span> <span class="cmd">omnis-key start</span></div>
+    <div><span class="ok">✓ OMNIS KEY daemon running on :18800</span></div>
+    <br>
+    <div><span class="prompt">$</span> <span class="cmd">omnis-key query "gas compression risk Permian Basin"</span></div>
+    <div><span class="out">METEOR → NOVA → ECLIPSE → PULSAR → HEIMDALL → AURORA</span></div>
+    <div><span class="val">DECISION: MONITOR | Confidence: 0.82 | HEIMDALL: 88/100 SOVEREIGN</span></div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">OMNIS KEY</div>
+  <div class="footer-links">
+    <a href="https://github.com/lelandsequel/omnis-key" target="_blank">GitHub</a>
+    <a href="https://jourdanlabs.com" target="_blank">JourdanLabs</a>
+    <a href="https://cosmic.jourdanlabs.com" target="_blank">COSMIC Demo</a>
+  </div>
+  <div class="footer-copy">Built by JourdanLabs. COSMIC substrate.</div>
+</footer>
+
+<script>
+  function copyInstall() {
+    navigator.clipboard.writeText('npm install -g omnis-key && omnis-key setup').then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.textContent = 'COPIED';
+      setTimeout(() => btn.textContent = 'COPY', 2000);
+    });
+  }
+
+  const DEMO_RESPONSES = {
+    default: {
+      decision: 'MONITOR',
+      confidence: 0.79,
+      domain: 'MINERAL',
+      signal: 'Elevated risk pattern detected. NOVA identifies 3 causal drivers. ECLIPSE shows 14-day trend divergence.',
+      heimdall: 'HEIMDALL: 85/100 — SOVEREIGN. SHA-256 attestation confirmed.',
+      engines: ['METEOR', 'NOVA', 'ECLIPSE', 'PULSAR', 'HEIMDALL', 'AURORA'],
+    }
+  };
+
+  const ENGINE_LABELS = {
+    METEOR: 'Signal correlation',
+    NOVA: 'Causal inference',
+    ECLIPSE: 'Temporal trend',
+    PULSAR: 'Stress testing',
+    HEIMDALL: 'Trust scoring',
+    AURORA: 'Gate decision',
+  };
+
+  async function runDemo() {
+    const q = document.getElementById('demo-query').value.trim();
+    if (!q) return;
+
+    const out = document.getElementById('demo-output');
+    out.innerHTML = '<div style="color:#666">// Running COSMIC pipeline...</div>';
+
+    const engines = ['METEOR', 'NOVA', 'ECLIPSE', 'PULSAR', 'HEIMDALL', 'AURORA'];
+    let engineLine = '';
+
+    for (let i = 0; i < engines.length; i++) {
+      await new Promise(r => setTimeout(r, 350));
+      engineLine = engines.slice(0, i + 1).join(' <span style="color:#FFD700">→</span> ');
+      out.innerHTML = `<div style="color:#666">// Pipeline firing...</div><div style="color:#888;margin-top:12px;">${engineLine}</div>`;
+    }
+
+    await new Promise(r => setTimeout(r, 400));
+
+    // Deterministic "demo" response based on query keywords
+    const qLow = q.toLowerCase();
+    let decision = 'MONITOR', confidence = 0.78, domain = 'MINERAL', heimdallScore = 85, heimdallTier = 'SOVEREIGN';
+
+    if (qLow.includes('buy') || qLow.includes('invest') || qLow.includes('trade')) {
+      domain = 'CAPITAL'; decision = 'HOLD'; confidence = 0.71; heimdallScore = 80;
+    } else if (qLow.includes('gas') || qLow.includes('compress') || qLow.includes('pipeline')) {
+      domain = 'ENERGY'; decision = 'MONITOR'; confidence = 0.83; heimdallScore = 88;
+    } else if (qLow.includes('food') || qLow.includes('water') || qLow.includes('conflict')) {
+      domain = 'GAIA'; decision = 'ALERT'; confidence = 0.76; heimdallScore = 82;
+    } else if (qLow.includes('defense') || qLow.includes('military')) {
+      domain = 'AEGIS'; decision = 'RESTRICTED'; confidence = 0.91; heimdallScore = 94;
+    }
+
+    out.innerHTML = `
+      <div class="result-label">// COSMIC PIPELINE COMPLETE — ${domain}</div>
+      <div class="result-decision">${decision}</div>
+      <div class="result-confidence">Confidence: ${(confidence * 100).toFixed(0)}% · Domain: ${domain}</div>
+      <div style="color:#888;margin-top:12px;font-size:12px;">NOVA identified 3 causal drivers. ECLIPSE: 14-day trend divergence. PULSAR: 2 of 5 stress scenarios triggered.</div>
+      <div class="result-heimdall">HEIMDALL ${heimdallScore}/100 — ${heimdallTier} · SHA-256 attestation confirmed.</div>
+      <div style="color:#444;margin-top:20px;font-size:11px;">// This is a demo. Run <code style="color:#FFD700">omnis-key start</code> locally for full COSMIC pipeline with live data.</div>
+    `;
+  }
+
+  document.getElementById('demo-query').addEventListener('keydown', e => {
+    if (e.key === 'Enter') runDemo();
+  });
+</script>
+</body>
+</html>
