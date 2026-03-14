@@ -184,11 +184,36 @@ app.get('/llm/status', async (_req: Request, res: Response) => {
   res.json(await getLLMStatus());
 });
 
+// ── ElevenLabs Conversational AI — signed URL for WebSocket auth ──────────────
+app.get('/convai/signed-url', async (_req: Request, res: Response) => {
+  const cfg = getConfig() as any;
+  const apiKey = cfg.elevenLabsApiKey;
+  const agentId = cfg.elevenLabsAgentId || 'agent_2901kkq1hzf8e46vnncs9tjs94zv';
+
+  if (!apiKey) return res.status(503).json({ error: 'ElevenLabs API key not configured' });
+
+  try {
+    const resp = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get_signed_url?agent_id=${agentId}`,
+      { headers: { 'xi-api-key': apiKey } }
+    );
+    if (!resp.ok) {
+      const err = await resp.text();
+      return res.status(resp.status).json({ error: err });
+    }
+    const data = await resp.json() as { signed_url: string };
+    res.json({ signed_url: data.signed_url, agent_id: agentId });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ── JARVIS voice UI ───────────────────────────────────────────────────────────
 app.get('/jarvis', (_req: Request, res: Response) => {
   const cfg = getConfig() as any;
   const hasElevenLabs = !!cfg.elevenLabsApiKey;
-  res.send(buildJarvisPage(hasElevenLabs));
+  const agentId = cfg.elevenLabsAgentId || 'agent_2901kkq1hzf8e46vnncs9tjs94zv';
+  res.send(buildJarvisPage(hasElevenLabs, agentId));
 });
 
 app.get('/status', async (_req: Request, res: Response) => {
@@ -266,48 +291,58 @@ function formatUptime(ms: number): string {
   return `${Math.floor(s / 3600)}h ${Math.floor((s % 3600) / 60)}m`;
 }
 
-function buildJarvisPage(hasElevenLabs: boolean): string {
+function buildJarvisPage(hasElevenLabs: boolean, agentId: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>OMNIS KEY — JARVIS Mode</title>
+<script src="https://cdn.jsdelivr.net/npm/@elevenlabs/client@latest/dist/index.umd.js"><\/script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#000;color:#e0e0e0;font-family:'Courier New',monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
-.arc-container{position:relative;width:340px;height:340px;margin-bottom:32px}
-.arc-ring{position:absolute;border-radius:50%;border:2px solid transparent}
-.ring-1{width:340px;height:340px;top:0;left:0;border-top-color:#FFD700;border-right-color:#FFD700;animation:spin1 4s linear infinite}
-.ring-2{width:280px;height:280px;top:30px;left:30px;border-bottom-color:#00AAFF;border-left-color:#00AAFF;animation:spin2 3s linear infinite reverse}
-.ring-3{width:220px;height:220px;top:60px;left:60px;border-top-color:#00FF88;animation:spin3 2s linear infinite}
+.arc-container{position:relative;width:300px;height:300px;margin-bottom:28px;flex-shrink:0}
+.arc-ring{position:absolute;border-radius:50%;border:2px solid transparent;transition:all 0.4s}
+.ring-1{width:300px;height:300px;top:0;left:0;border-top-color:#FFD700;border-right-color:#FFD700;animation:spin1 4s linear infinite}
+.ring-2{width:244px;height:244px;top:28px;left:28px;border-bottom-color:#00AAFF;border-left-color:#00AAFF;animation:spin2 3s linear infinite reverse}
+.ring-3{width:188px;height:188px;top:56px;left:56px;border-top-color:#00FF88;animation:spin3 2s linear infinite}
+.ring-1.speaking{border-top-color:#00FF88;border-right-color:#00FF88}
+.ring-2.listening{border-bottom-color:#FF4444;border-left-color:#FF4444}
 @keyframes spin1{to{transform:rotate(360deg)}}
 @keyframes spin2{to{transform:rotate(360deg)}}
 @keyframes spin3{to{transform:rotate(360deg)}}
-.center-orb{position:absolute;width:140px;height:140px;top:100px;left:100px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#1a1a2e,#000);border:1px solid #FFD700;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;transition:all 0.3s}
-.center-orb:hover{border-color:#FFD700;box-shadow:0 0 30px rgba(255,215,0,0.3)}
-.center-orb.listening{border-color:#FF4444;box-shadow:0 0 40px rgba(255,68,68,0.5);animation:pulse 1s ease-in-out infinite}
-.center-orb.processing{border-color:#00AAFF;box-shadow:0 0 40px rgba(0,170,255,0.4)}
-.center-orb.speaking{border-color:#00FF88;box-shadow:0 0 40px rgba(0,255,136,0.4);animation:pulse 0.5s ease-in-out infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
-.orb-icon{font-size:2rem;margin-bottom:4px}
-.orb-label{font-size:0.6rem;letter-spacing:0.2em;color:#666;text-transform:uppercase}
-.title{font-size:1.8rem;font-weight:900;letter-spacing:0.15em;color:#FFD700;margin-bottom:4px;text-align:center}
-.subtitle{color:#444;font-size:0.7rem;letter-spacing:0.2em;margin-bottom:32px;text-align:center}
-.transcript{min-height:60px;max-width:600px;width:90%;text-align:center;color:#aaa;font-size:0.9rem;margin-bottom:16px;line-height:1.6;font-style:italic}
-.response{min-height:80px;max-width:600px;width:90%;text-align:center;color:#FFD700;font-size:0.85rem;margin-bottom:24px;line-height:1.7;display:none}
-.meta-bar{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;font-size:0.65rem;letter-spacing:0.1em;color:#333}
-.meta-item{padding:4px 10px;border:1px solid #1a1a1a}
+.center-orb{position:absolute;width:120px;height:120px;top:90px;left:90px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#1a1a2e,#000);border:2px solid #FFD700;display:flex;align-items:center;justify-content:center;flex-direction:column;cursor:pointer;transition:all 0.3s;user-select:none}
+.center-orb:hover{box-shadow:0 0 24px rgba(255,215,0,0.25)}
+.center-orb.idle{border-color:#FFD700}
+.center-orb.connecting{border-color:#666;animation:pulse 1.5s ease-in-out infinite}
+.center-orb.listening{border-color:#FF4444;box-shadow:0 0 40px rgba(255,68,68,0.5);animation:pulse 0.8s ease-in-out infinite}
+.center-orb.speaking{border-color:#00FF88;box-shadow:0 0 40px rgba(0,255,136,0.45);animation:pulse 0.5s ease-in-out infinite}
+.center-orb.disconnected{border-color:#333}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.orb-icon{font-size:1.8rem;margin-bottom:3px;pointer-events:none}
+.orb-label{font-size:0.55rem;letter-spacing:0.2em;color:#888;text-transform:uppercase;pointer-events:none}
+.title{font-size:1.6rem;font-weight:900;letter-spacing:0.15em;color:#FFD700;margin-bottom:3px;text-align:center}
+.subtitle{color:#444;font-size:0.65rem;letter-spacing:0.2em;margin-bottom:24px;text-align:center}
+.transcript{min-height:48px;max-width:580px;width:92%;text-align:center;color:#777;font-size:0.85rem;margin-bottom:10px;line-height:1.6;font-style:italic;transition:color 0.3s}
+.transcript.user-speaking{color:#aaa}
+.response{max-width:580px;width:92%;text-align:center;color:#FFD700;font-size:0.82rem;margin-bottom:18px;line-height:1.7;min-height:48px}
+.meta-bar{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:16px;font-size:0.6rem;letter-spacing:0.1em;color:#333}
+.meta-item{padding:3px 9px;border:1px solid #1a1a1a;transition:all 0.3s}
 .meta-item.active{border-color:#FFD700;color:#FFD700}
-.instructions{color:#333;font-size:0.65rem;letter-spacing:0.1em;text-align:center;margin-top:8px}
-.error{color:#FF4444;font-size:0.75rem;text-align:center;margin-top:8px}
-.history{max-width:600px;width:90%;margin-top:24px}
-.hist-item{padding:8px 12px;border-left:2px solid #1a1a1a;margin-bottom:6px;font-size:0.75rem;color:#555}
-.hist-item.user{border-color:#333;color:#777}
-.hist-item.ai{border-color:#FFD700;color:#999}
-.nav{position:fixed;top:16px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-size:0.65rem;letter-spacing:0.15em}
-.nav a{color:#333;text-decoration:none}
+.meta-item.green{border-color:#00FF88;color:#00FF88}
+.barge-hint{color:#333;font-size:0.6rem;letter-spacing:0.1em;text-align:center;margin-bottom:4px}
+.status-line{color:#444;font-size:0.6rem;letter-spacing:0.1em;text-align:center;margin-bottom:8px;min-height:16px}
+.status-line.error{color:#FF4444}
+.history{max-width:580px;width:92%;margin-top:16px;max-height:160px;overflow-y:auto}
+.hist-item{padding:6px 10px;border-left:2px solid #1a1a1a;margin-bottom:4px;font-size:0.7rem;color:#555}
+.hist-item.user{border-color:#333;color:#666}
+.hist-item.ai{border-color:#FFD700;color:#888}
+.nav{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:flex;gap:16px;font-size:0.6rem;letter-spacing:0.15em}
+.nav a{color:#2a2a2a;text-decoration:none;transition:color 0.2s}
 .nav a:hover{color:#FFD700}
+.conn-btn{margin-top:12px;background:none;border:1px solid #2a2a2a;color:#444;font-family:'Courier New',monospace;font-size:0.65rem;letter-spacing:0.15em;padding:6px 16px;cursor:pointer;transition:all 0.2s}
+.conn-btn:hover{border-color:#FFD700;color:#FFD700}
 </style>
 </head>
 <body>
@@ -322,185 +357,203 @@ body{background:#000;color:#e0e0e0;font-family:'Courier New',monospace;min-heigh
 <p class="subtitle">COSMIC INTELLIGENCE · JARVIS MODE</p>
 
 <div class="arc-container">
-  <div class="arc-ring ring-1"></div>
-  <div class="arc-ring ring-2"></div>
-  <div class="arc-ring ring-3"></div>
-  <div class="center-orb" id="orb" onclick="toggleListen()">
+  <div class="arc-ring ring-1" id="ring1"></div>
+  <div class="arc-ring ring-2" id="ring2"></div>
+  <div class="arc-ring ring-3" id="ring3"></div>
+  <div class="center-orb idle" id="orb" onclick="handleOrbClick()">
     <div class="orb-icon" id="orbIcon">🎙️</div>
-    <div class="orb-label" id="orbLabel">TAP TO SPEAK</div>
+    <div class="orb-label" id="orbLabel">TAP TO START</div>
   </div>
 </div>
 
-<div class="transcript" id="transcript">Ready for your query, sir.</div>
+<div class="transcript" id="transcript">Press the orb to begin a conversation.</div>
 <div class="response" id="response"></div>
 
 <div class="meta-bar">
   <div class="meta-item" id="metaDomain">DOMAIN: —</div>
   <div class="meta-item" id="metaConf">CONFIDENCE: —</div>
   <div class="meta-item" id="metaHeimdall">HEIMDALL: —</div>
-  <div class="meta-item" id="metaVoice">${hasElevenLabs ? 'VOICE: ANDROID 18' : 'VOICE: NOT CONFIGURED'}</div>
+  <div class="meta-item green" id="metaMode">CONVAI: READY</div>
 </div>
 
-<div class="instructions" id="instructions">
-  ${hasElevenLabs
-    ? 'Tap the orb, speak your query, COSMIC will respond with voice.'
-    : 'Voice disabled — run: omnis-key config set elevenLabsApiKey sk_... · Tap orb for text mode.'}
-</div>
-<div class="error" id="errorMsg"></div>
-
+<div class="barge-hint" id="bargeHint">Interrupt at any time — just speak</div>
+<div class="status-line" id="statusLine">${hasElevenLabs ? 'ElevenLabs Conversational AI · Android 18 voice' : 'ElevenLabs API key not configured'}</div>
 <div class="history" id="history"></div>
 
 <script>
 const HAS_ELEVEN = ${hasElevenLabs};
-let recognition = null;
-let listening = false;
-let conversationHistory = [];
+const AGENT_ID = '${agentId}';
+let conversation = null;
+let isConnected = false;
+let transcriptHistory = [];
 
-// Init Web Speech API
-function initSpeech() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) {
-    document.getElementById('instructions').textContent = 'Web Speech API not supported. Use Chrome or Safari.';
-    return false;
-  }
-  recognition = new SR();
-  recognition.continuous = false;
-  recognition.interimResults = true;
-  recognition.lang = 'en-US';
+const ElevenLabsClient = window.ElevenLabsClient;
 
-  recognition.onresult = (e) => {
-    const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
-    document.getElementById('transcript').textContent = '"' + transcript + '"';
-    if (e.results[e.results.length - 1].isFinal) {
-      stopListening();
-      runCOSMIC(transcript);
-    }
-  };
-
-  recognition.onerror = (e) => {
-    setError('Mic error: ' + e.error);
-    stopListening();
-  };
-
-  recognition.onend = () => {
-    if (listening) stopListening();
-  };
-
-  return true;
-}
-
-function setOrb(mode) {
+function setOrb(mode, labelText) {
   const orb = document.getElementById('orb');
   const icon = document.getElementById('orbIcon');
   const label = document.getElementById('orbLabel');
   orb.className = 'center-orb ' + mode;
-  if (mode === 'listening') { icon.textContent = '🔴'; label.textContent = 'LISTENING'; }
-  else if (mode === 'processing') { icon.textContent = '⚡'; label.textContent = 'PROCESSING'; }
-  else if (mode === 'speaking') { icon.textContent = '🔊'; label.textContent = 'SPEAKING'; }
-  else { icon.textContent = '🎙️'; label.textContent = 'TAP TO SPEAK'; }
+  const icons = { idle:'🎙️', connecting:'⟳', listening:'🔴', speaking:'🔊', disconnected:'💤' };
+  const labels = { idle:'TAP TO START', connecting:'CONNECTING', listening:'LISTENING', speaking:'SPEAKING', disconnected:'DISCONNECTED' };
+  icon.textContent = icons[mode] || '🎙️';
+  label.textContent = labelText || labels[mode] || mode.toUpperCase();
+  document.getElementById('ring1').className = 'arc-ring ring-1' + (mode === 'speaking' ? ' speaking' : '');
+  document.getElementById('ring2').className = 'arc-ring ring-2' + (mode === 'listening' ? ' listening' : '');
 }
 
-function setError(msg) {
-  document.getElementById('errorMsg').textContent = msg;
-  setTimeout(() => { document.getElementById('errorMsg').textContent = ''; }, 4000);
+function setStatus(msg, isError) {
+  const el = document.getElementById('statusLine');
+  el.textContent = msg;
+  el.className = 'status-line' + (isError ? ' error' : '');
 }
 
-function toggleListen() {
-  if (listening) { stopListening(); return; }
-  if (!recognition && !initSpeech()) return;
-  listening = true;
-  setOrb('listening');
-  document.getElementById('transcript').textContent = 'Listening...';
-  document.getElementById('response').style.display = 'none';
-  recognition.start();
+function updateMeta(domain, confidence, heimdall) {
+  if (domain) { const el = document.getElementById('metaDomain'); el.textContent = 'DOMAIN: ' + String(domain).toUpperCase(); el.classList.add('active'); }
+  if (confidence != null) { const el = document.getElementById('metaConf'); el.textContent = 'CONFIDENCE: ' + Math.round(parseFloat(confidence)*100) + '%'; el.classList.add('active'); }
+  if (heimdall != null) { const el = document.getElementById('metaHeimdall'); el.textContent = 'HEIMDALL: ' + heimdall + '/100'; el.classList.add('active'); }
 }
 
-function stopListening() {
-  listening = false;
-  try { recognition.stop(); } catch {}
-}
-
-async function runCOSMIC(query) {
-  setOrb('processing');
-  document.getElementById('instructions').textContent = 'Running COSMIC pipeline...';
-
-  try {
-    if (HAS_ELEVEN) {
-      // Voice mode: POST /jarvis with speak=true → get audio back
-      const resp = await fetch('/jarvis', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ query, user_id: 'jarvis-user', channel: 'voice', speak: true })
-      });
-
-      if (resp.headers.get('Content-Type')?.includes('audio')) {
-        const verbalText = decodeURIComponent(resp.headers.get('X-Verbal-Text') || '');
-        const confidence = resp.headers.get('X-Confidence') || '—';
-        const domain = resp.headers.get('X-Domain') || '—';
-        const trustScore = resp.headers.get('X-Trust-Score') || '—';
-
-        updateMeta(domain, confidence, trustScore);
-        if (verbalText) {
-          document.getElementById('response').textContent = verbalText;
-          document.getElementById('response').style.display = 'block';
-        }
-
-        addHistory(query, verbalText || 'COSMIC response received');
-        setOrb('speaking');
-
-        const blob = await resp.blob();
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        audio.onended = () => { setOrb(''); document.getElementById('instructions').textContent = 'Tap the orb to continue.'; URL.revokeObjectURL(audioUrl); };
-        audio.play();
-        return;
-      }
-    }
-
-    // Text fallback
-    const resp = await fetch('/jarvis', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ query, user_id: 'jarvis-user', channel: 'voice', speak: false })
-    });
-    const data = await resp.json();
-    const stack = data.trust_stack;
-    const verbal = data.verbal_response;
-
-    updateMeta(stack?.domain, stack?.confidence, stack?.heimdall?.attestation?.trust_score);
-    document.getElementById('response').textContent = verbal;
-    document.getElementById('response').style.display = 'block';
-    addHistory(query, verbal);
-    setOrb('');
-    document.getElementById('instructions').textContent = 'Tap the orb to continue.';
-
-  } catch(e) {
-    setError('COSMIC pipeline error: ' + e.message);
-    setOrb('');
-  }
-}
-
-function updateMeta(domain, confidence, trustScore) {
-  if (domain) { const el = document.getElementById('metaDomain'); el.textContent = 'DOMAIN: ' + domain?.toUpperCase(); el.classList.add('active'); }
-  if (confidence) { const el = document.getElementById('metaConf'); el.textContent = 'CONFIDENCE: ' + Math.round(parseFloat(confidence)*100) + '%'; el.classList.add('active'); }
-  if (trustScore) { const el = document.getElementById('metaHeimdall'); el.textContent = 'HEIMDALL: ' + trustScore + '/100'; el.classList.add('active'); }
-}
-
-function addHistory(query, response) {
-  conversationHistory.unshift({ query, response });
-  if (conversationHistory.length > 6) conversationHistory.pop();
+function addHistory(role, text) {
+  transcriptHistory.push({ role, text });
+  if (transcriptHistory.length > 12) transcriptHistory.shift();
   const hist = document.getElementById('history');
-  hist.innerHTML = conversationHistory.slice(0, 4).map(h =>
-    '<div class="hist-item user">You: ' + h.query.slice(0, 80) + '</div>' +
-    '<div class="hist-item ai">COSMIC: ' + h.response.slice(0, 120) + '</div>'
+  hist.innerHTML = transcriptHistory.slice(-6).reverse().map(h =>
+    '<div class="hist-item ' + h.role + '">' + (h.role === 'user' ? 'You' : 'COSMIC') + ': ' + h.text.slice(0, 120) + '</div>'
   ).join('');
 }
 
-// Keyboard shortcut: spacebar to talk
+async function startConversation() {
+  if (!HAS_ELEVEN) {
+    setStatus('ElevenLabs API key not configured. Run: omnis-key config set elevenLabsApiKey sk_...', true);
+    return;
+  }
+  if (!ElevenLabsClient || !ElevenLabsClient.Conversation) {
+    setStatus('ElevenLabs SDK not loaded. Check network.', true);
+    return;
+  }
+
+  setOrb('connecting');
+  setStatus('Requesting signed URL...');
+
+  try {
+    // Get signed URL from our daemon
+    const urlResp = await fetch('/convai/signed-url');
+    if (!urlResp.ok) {
+      const err = await urlResp.json();
+      throw new Error(err.error || 'Failed to get signed URL');
+    }
+    const { signed_url } = await urlResp.json();
+
+    setStatus('Connecting to ElevenLabs...');
+
+    conversation = await ElevenLabsClient.Conversation.startSession({
+      signedUrl: signed_url,
+
+      // Client tool: COSMIC query — runs locally against our daemon
+      clientTools: {
+        cosmic_query: async ({ query, domain }) => {
+          setStatus('Running COSMIC pipeline: ' + query.slice(0, 50) + '...');
+          try {
+            const resp = await fetch('/query', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query, domain })
+            });
+            const data = await resp.json();
+            updateMeta(data.domain, data.confidence, data.heimdall?.attestation?.trust_score);
+            return JSON.stringify({
+              decision: data.decision,
+              confidence: data.confidence,
+              domain: data.domain,
+              signal: data.signal,
+              heimdall_score: data.heimdall?.attestation?.trust_score,
+              heimdall_tier: data.heimdall?.attestation?.tier,
+              causal_drivers: data.nova?.top_causes?.slice(0, 3) || [],
+              stress_triggered: data.pulsar?.triggered_scenarios?.length || 0,
+              approved: data.aurora?.approved
+            });
+          } catch (e) {
+            return JSON.stringify({ error: 'COSMIC pipeline unavailable: ' + e.message });
+          }
+        }
+      },
+
+      onConnect: () => {
+        isConnected = true;
+        setStatus('Connected · Android 18 voice · Interrupt anytime');
+        document.getElementById('metaMode').textContent = 'CONVAI: LIVE';
+      },
+
+      onDisconnect: () => {
+        isConnected = false;
+        conversation = null;
+        setOrb('idle');
+        setStatus('Session ended. Tap to start again.');
+        document.getElementById('metaMode').textContent = 'CONVAI: READY';
+      },
+
+      onError: (msg) => {
+        setStatus('Error: ' + (typeof msg === 'string' ? msg : JSON.stringify(msg)), true);
+        setOrb('idle');
+      },
+
+      onModeChange: ({ mode }) => {
+        if (mode === 'speaking') {
+          setOrb('speaking');
+          setStatus('Android 18 speaking — interrupt anytime');
+        } else if (mode === 'listening') {
+          setOrb('listening');
+          setStatus('Listening...');
+          document.getElementById('transcript').className = 'transcript user-speaking';
+        }
+      },
+
+      onMessage: ({ source, message }) => {
+        if (source === 'user') {
+          document.getElementById('transcript').textContent = '"' + message + '"';
+          addHistory('user', message);
+        } else if (source === 'ai') {
+          document.getElementById('response').textContent = message;
+          addHistory('ai', message);
+          document.getElementById('transcript').className = 'transcript';
+        }
+      },
+    });
+
+  } catch (e) {
+    setStatus('Connection failed: ' + e.message, true);
+    setOrb('idle');
+    conversation = null;
+  }
+}
+
+async function stopConversation() {
+  if (conversation) {
+    try { await conversation.endSession(); } catch {}
+    conversation = null;
+  }
+  isConnected = false;
+  setOrb('idle');
+  setStatus('Session ended. Tap to start again.');
+}
+
+async function handleOrbClick() {
+  if (isConnected) {
+    await stopConversation();
+  } else {
+    await startConversation();
+  }
+}
+
+// Spacebar = start/stop
 document.addEventListener('keydown', (e) => {
-  if (e.code === 'Space' && !e.target.matches('input')) { e.preventDefault(); toggleListen(); }
+  if (e.code === 'Space' && !e.target.matches('input,textarea')) {
+    e.preventDefault();
+    handleOrbClick();
+  }
 });
-</script>
+<\/script>
 </body>
 </html>`;
 }
