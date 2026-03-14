@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>ai.omniskey.daemon</string>
+    <key>ProgramArguments</key>
+    <array>
+        <!-- Replace /usr/local/bin/node with the output of: which node -->
+        <string>/usr/local/bin/node</string>
+        <!-- Replace with path to your omnis-key-runtime/dist/daemon.js -->
+        <string>/Users/YOURUSER/.openclaw/workspace/omnis-key-runtime/dist/daemon.js</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/Users/YOURUSER/.omnis-key/daemon.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/YOURUSER/.omnis-key/daemon.log</string>
+    <key>WorkingDirectory</key>
+    <string>/Users/YOURUSER/.openclaw/workspace/omnis-key-runtime</string>
+</dict>
+</plist>
+
+<!-- 
+  INSTALL:
+  1. Edit this file — replace YOURUSER with your actual username
+  2. Replace /usr/local/bin/node with: which node
+  3. cp scripts/ai.omniskey.daemon.plist ~/Library/LaunchAgents/
+  4. launchctl load ~/Library/LaunchAgents/ai.omniskey.daemon.plist
+  
+  MANAGE:
+  launchctl start ai.omniskey.daemon
+  launchctl stop ai.omniskey.daemon
+  launchctl unload ~/Library/LaunchAgents/ai.omniskey.daemon.plist
+-->

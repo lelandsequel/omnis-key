@@ -1,0 +1,50 @@
+{
+  "name": "omnis-key",
+  "version": "1.0.0",
+  "description": "OMNIS KEY — Local COSMIC Runtime. OpenClaw-style daemon with world-model intelligence built in.",
+  "main": "dist/daemon.js",
+  "bin": {
+    "omnis-key": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "ts-node-dev --respawn --transpile-only src/daemon.ts",
+    "start": "node dist/daemon.js",
+    "setup": "node dist/setup.js",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "ai", "cosmic", "intelligence", "daemon", "local", "jarvis",
+    "mineral", "defense", "causal", "temporal", "autonomous"
+  ],
+  "author": "JourdanLabs <leland@jourdanlabs.com>",
+  "license": "MIT",
+  "homepage": "https://omniskey.ai",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lelandsequel/omnis-key"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "commander": "^11.1.0",
+    "express": "^4.18.2",
+    "node-telegram-bot-api": "^0.64.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.11.0",
+    "@types/node-telegram-bot-api": "^0.64.5",
+    "@types/uuid": "^9.0.7",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3"
+  }
+}
