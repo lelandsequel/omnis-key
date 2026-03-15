@@ -43,8 +43,8 @@ export const AVAILABLE_CONSTELLATIONS: Omit<ConstellationManifest, 'installPath'
     displayName: 'SOLSTICE — Refinery & Logistics Intelligence',
     version: '1.0.0',
     domain: 'refinery',
-    engines: ['SOLSTICE.FLOW', 'SOLSTICE.MARGIN', 'SOLSTICE.SLATE', 'SOLSTICE.TURNAROUND', 'SOLSTICE.LOGISTICS'],
-    description: 'Refinery operations, crack spreads, turnaround planning, product logistics',
+    engines: ['SOLSTICE.REFINE', 'SOLSTICE.ROUTE', 'SOLSTICE.SURGE', 'SOLSTICE.VEIL', 'SOLSTICE.PRISM'],
+    description: 'Crude slate optimization, logistics routing, demand surge detection, regulatory opacity, margin scoring',
   },
   {
     name: 'gaia',
@@ -52,7 +52,7 @@ export const AVAILABLE_CONSTELLATIONS: Omit<ConstellationManifest, 'installPath'
     version: '1.0.0',
     domain: 'food',
     engines: ['GAIA.HARVEST', 'GAIA.DENSITY', 'GAIA.RIVER', 'GAIA.FRONTIER', 'GAIA.PRISM'],
-    description: 'Crop yields, water stress, conflict risk, food stability composite score',
+    description: 'Agricultural production, population pressure, water stress, conflict access, food stability score',
   },
   {
     name: 'aegis',
@@ -112,24 +112,52 @@ export function listConstellations(): {
 }
 
 /**
- * Load built-in POLARIS constellation (full 5-engine pack)
- * Additional constellations (SOLSTICE, GAIA, AEGIS) ship as separate npm packages
+ * Load built-in constellations: POLARIS, SOLSTICE, GAIA
+ * AEGIS ships as a separate npm package
  */
 export function loadBuiltinStubs(): void {
-  // Lazy-require to avoid circular deps
+  // POLARIS — Gas & Compression
   const { runPolaris } = require('./polaris');
-
-  const polarisPack: ConstellationPack = {
+  registerConstellation({
     manifest: {
       name: 'polaris',
       displayName: 'POLARIS — Gas & Compression Intelligence',
       version: '1.0.0',
       domain: 'gas',
       engines: ['POLARIS.CORE', 'POLARIS.FLUX', 'POLARIS.RESONANCE', 'POLARIS.DRIVE', 'POLARIS.CRYO'],
-      description: 'Full gas & compression intelligence: compressor health, flow efficiency, pipeline integrity, drive train, cryo operations',
+      description: 'Compressor health, gas flow efficiency, pipeline integrity, drive train, cryo operations',
       installPath: 'builtin',
     },
     query: async (text: string) => runPolaris(text),
-  };
-  registerConstellation(polarisPack);
+  });
+
+  // SOLSTICE — Refinery & Logistics
+  const { runSolstice } = require('./solstice');
+  registerConstellation({
+    manifest: {
+      name: 'solstice',
+      displayName: 'SOLSTICE — Refinery & Logistics Intelligence',
+      version: '1.0.0',
+      domain: 'refinery',
+      engines: ['SOLSTICE.REFINE', 'SOLSTICE.ROUTE', 'SOLSTICE.SURGE', 'SOLSTICE.VEIL', 'SOLSTICE.PRISM'],
+      description: 'Crude slate optimization, logistics routing, demand surge detection, regulatory opacity, margin scoring',
+      installPath: 'builtin',
+    },
+    query: async (_text: string, context?: any) => runSolstice(context || {}),
+  });
+
+  // GAIA — Food, Water & Conflict
+  const { runGaia } = require('./gaia');
+  registerConstellation({
+    manifest: {
+      name: 'gaia',
+      displayName: 'GAIA — Food, Water & Conflict Intelligence',
+      version: '1.0.0',
+      domain: 'food',
+      engines: ['GAIA.HARVEST', 'GAIA.DENSITY', 'GAIA.RIVER', 'GAIA.FRONTIER', 'GAIA.PRISM'],
+      description: 'Agricultural production, population pressure, water stress, conflict access, food stability composite score',
+      installPath: 'builtin',
+    },
+    query: async (_text: string, context?: any) => runGaia(context || {}),
+  });
 }
